@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+env/
+.venv/
+
+# dbt artifacts
+target/
+dbt_packages/
+logs/
+.user.yml
+
+# Secrets and credentials
+.env
+*.env
+profiles.yml
+
+# Spark outputs
+*.log
+spark-warehouse/
+
+# OS and IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp

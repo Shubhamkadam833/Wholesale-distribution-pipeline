@@ -1,0 +1,112 @@
+# ==============================================================================
+# FILE        : models/gold/schema.yml
+# PURPOSE     : Column documentation and dbt tests for Gold layer models
+# DESCRIPTION : Declares column level tests that dbt runs on every execution.
+#               These tests are the final data quality gate before metrics
+#               appear in Power BI dashboards and carrier performance reports.
+# ==============================================================================
+
+version: 2
+
+models:
+  - name        : gld_low_stock_alerts
+    description : >
+      Daily low stock alerts aggregated from the Silver warehouse stock snapshot.
+      One row per warehouse, SKU, and alert date with a three tier alert
+      classification (CRITICAL, WARNING, WATCH), suggested reorder quantity,
+      and revenue at risk calculation. Powers the supply chain operations
+      dashboard and the automated purchase order suggestion report.
+
+    columns:
+      - name        : warehouse_id
+        description : Warehouse where the low stock condition was detected
+        tests         :
+          - not_null
+
+      - name        : sku_id
+        description : Stock keeping unit with the low stock condition
+        tests         :
+          - not_null
+
+      - name        : alert_date
+        description : Business date the alert condition was measured
+        tests         :
+          - not_null
+
+      - name        : alert_tier
+        description : Severity tier. CRITICAL requires immediate action. WARNING needs monitoring. WATCH is early notice.
+        tests         :
+          - not_null
+          - accepted_values:
+              values: ['CRITICAL', 'WARNING', 'WATCH']
+
+      - name        : units_available
+        description : Available units after subtracting reserved stock from on hand stock
+        tests         :
+          - not_null
+
+      - name        : suggested_reorder_qty
+        description : Recommended quantity to reorder based on WMS reorder quantity or a safe default formula
+        tests         :
+          - not_null
+
+      - name        : revenue_at_risk
+        description : Potential lost revenue if this SKU stocks out before replenishment arrives
+
+      - name        : gld_updated_at
+        description : Timestamp when this row was last written by a dbt run
+
+
+  - name        : gld_ndd_success_rates
+    description : >
+      Daily next day delivery success rate metrics aggregated by ship date,
+      warehouse, carrier, and region. Primary KPI source for the logistics
+      operations dashboard and the carrier performance scorecard.
+      The ndd_success_rate_pct and ndd_performance_tier columns are the
+      headline metrics used in executive reporting.
+
+    columns:
+      - name        : ship_date
+        description : Date the shipment left the warehouse
+        tests         :
+          - not_null
+
+      - name        : warehouse_id
+        description : Warehouse that dispatched the shipments
+        tests         :
+          - not_null
+
+      - name        : carrier_id
+        description : Carrier responsible for delivering the shipments
+        tests         :
+          - not_null
+
+      - name        : service_level_normalized
+        description : Normalized service level code. NDD is next day delivery. 2D is two day. STANDARD is ground.
+        tests         :
+          - not_null
+          - accepted_values:
+              values: ['NDD', '2D', 'STANDARD', 'UNKNOWN']
+
+      - name        : ndd_success_rate_pct
+        description : Percentage of NDD shipments delivered on or before the promised delivery date
+
+      - name        : ndd_performance_tier
+        description : RAG tier for this carrier and warehouse combination. GREEN is above 95%. AMBER is 85 to 94%. RED is below 85%.
+        tests         :
+          - accepted_values:
+              values: ['GREEN', 'AMBER', 'RED', 'NO_NDD']
+
+      - name        : on_time_rate_pct
+        description : Percentage of all service levels delivered on or before promise date
+
+      - name        : exception_rate_pct
+        description : Percentage of shipments with carrier exceptions (lost, damaged, returned)
+
+      - name        : total_shipments
+        description : Total shipments dispatched on this ship date for this grain combination
+        tests         :
+          - not_null
+
+      - name        : gld_updated_at
+        description : Timestamp when this row was last written by a dbt run

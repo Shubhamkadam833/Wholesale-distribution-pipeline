@@ -1,0 +1,75 @@
+# ==============================================================================
+# FILE        : models/bronze/sources.yml
+# PURPOSE     : dbt source declarations for Bronze Delta Lake tables in Fabric
+# DESCRIPTION : Declares the two raw Delta tables written by the PySpark
+#               ingestion script as dbt sources. The freshness block ensures
+#               dbt warns if the PySpark job did not land data before the
+#               dbt transformation job starts. This is the handoff contract
+#               between the ingestion layer and the transformation layer.
+# ==============================================================================
+
+version: 2
+
+sources:
+  - name: fabric_bronze
+    description  : Raw Delta Lake tables written by the PySpark ingestion job to the Bronze Lakehouse layer
+    database     : WHOLESALE_LAKEHOUSE
+    schema       : bronze
+
+    freshness:
+      warn_after  : {count: 14, period: hour}
+      error_after : {count: 26, period: hour}
+
+    loaded_at_field: _ingested_at
+
+    tables:
+      - name        : raw_warehouse_stock
+        description : Daily warehouse stock snapshots exported from the WMS and ingested by PySpark
+        columns:
+          - name        : warehouse_id
+            description : Unique identifier for the physical warehouse location
+            tests         :
+              - not_null
+
+          - name        : sku_id
+            description : Stock keeping unit identifier for the product
+            tests         :
+              - not_null
+
+          - name        : stock_snapshot_date
+            description : Business date for which this stock count applies
+            tests         :
+              - not_null
+
+          - name        : units_on_hand
+            description : Physical count of units present in the warehouse at snapshot time
+
+          - name        : reorder_point
+            description : Threshold below which a replenishment order should be triggered
+
+          - name        : _ingested_at
+            description : UTC timestamp when the PySpark job wrote this record to Bronze
+
+      - name        : raw_shipping_events
+        description : Carrier and WMS shipping event records ingested by PySpark
+        columns:
+          - name        : shipment_id
+            description : Unique identifier for the shipment assigned by the WMS
+            tests         :
+              - not_null
+
+          - name        : order_id
+            description : Customer order identifier that originated this shipment
+            tests         :
+              - not_null
+
+          - name        : event_timestamp
+            description : UTC timestamp of this shipping status event from the carrier
+            tests         :
+              - not_null
+
+          - name        : promised_delivery
+            description : Date the carrier committed to deliver this shipment
+
+          - name        : actual_delivery
+            description : Date the carrier confirmed delivery. Null if not yet delivered.
